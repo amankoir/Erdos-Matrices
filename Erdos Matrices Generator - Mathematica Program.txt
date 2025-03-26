@@ -1,0 +1,109 @@
+(*The MaxTrace function computes the maximal trace of a matrix over a given list of permutations*)
+MaxTrace[A_,permlist_]:=Max[Tr[A.#]&/@permlist];
+
+(*The splTrace function acts as a heuristic filter to efficiently eliminate a substantial portion of non-Erdős matrices before performing the computationally expensive defining condition check. It computes a specialized trace by iteratively selecting the largest entries in the matrix while ensuring they can be placed as diagonal elements under some permutation.*)
+splTrace[A_]:=Module[{B=A,u=Length[A],sum=0,pos},
+Do[pos=FirstPosition[B,Max[B]];(*Find position of maximum entry*)
+sum=sum+Max[B];(*Add the max entry to sum*)
+B=Drop[B,{pos[[1]]},{pos[[2]]}]; (*Remove the row and column of the selected entry*),
+u];
+sum];
+
+(*The ClassifyPermutationEquivalence module classifies a given list of matrices (matricesList) into equivalence classes under permutation equivalence*)ClassifyPermutationEquivalence[matricesList_,permlist_]:=Module[{permsSquare,equivClasses,equivClassfun},
+(*Compute the Cartesian product of the set of permutation matrices*)
+permsSquare=Tuples[permlist,2];
+(*Define a function to compute all matrices equivalent to a given matrix under the action of permutation matrices*)equivClassfun[permMatrix_]:=Table[permsSquare[[j,1]].permMatrix.permsSquare[[j,2]],{j,1,Length[permsSquare]}];
+(*Use NestWhile to iteratively extract equivalence classes:
+-Start with the initial list of matrices. At each step,extract matrices equivalent to the first element of the remaining list.
+-Remove those matrices from the remaining list and continue until all matrices are classified.
+-Sow and Reap collect the equivalence classes.*)equivClasses=Reap[NestWhile[Complement[#,Sow[equivClassfun[First[#]]\[Intersection]#]]&,matricesList,#!={}&]][[2,1]];
+(*Return the equivalence classes of matrices*)
+equivClasses]
+
+(*Supply values for n and k. These can be modified as needed.*)
+n=4; k=4;
+
+(*Step 1:Generate the set of permutation matrices of size n\[Times]n*)
+perms=Permutations[IdentityMatrix[n]]; (*All n\[Times]n permutation matrices*)
+permSet=ArrayReshape[Rest[perms],{n!-1,n^2}]; (*Excluding identity matrix*)
+
+(*Step 2:Generate subsets of permutation matrices containing the identity matrix*)
+permSubsets=Subsets[permSet,{k-1}]; (*Choose (k-1) permutations*)
+numSubsets=Length[permSubsets]; (*Number of subsets:binomial(n!-1,k-1)*)
+
+Print["Number of subsets of ",IntegerName[k]," ",n," * ",n," permutation matrices including identity: ",numSubsets];
+
+(*Include the identity matrix in each subset*)
+subsetList=Transpose[Join[{Table[Flatten[IdentityMatrix[n]],numSubsets]},Transpose[permSubsets]]];
+
+(*Step 3:Find linearly independent subsets of permutation matrices*)
+ranks=Table[MatrixRank[Transpose[subsetList[[i]]]],{i,1,numSubsets}];
+
+Print["Rank distribution of the spans of these subsets: ",Tally[ranks]];
+
+numIndepSubsets=Count[ranks,k]; (*Number of linearly independent subsets*)
+
+Print["The number of linearly independent subsets, |",Subscript[\[ScriptCapitalI], k],"| = ",numIndepSubsets];
+
+(*Extract only the linearly independent subsets*)
+indepSubsets=Select[subsetList,MatrixRank[Transpose[#]]==k&];
+
+(*Step 4:Compute Gram matrices for all independent subsets*)
+GramMatrix[u_]:=Outer[Dot,indepSubsets[[u]],indepSubsets[[u]],1];
+gramList=GramMatrix/@Range[numIndepSubsets];
+
+(*Solve Subscript[M, X]y=1 to obtain coefficients y*)
+solYList=LinearSolve[#,ConstantArray[1,k]]&/@gramList;
+
+(*Step 5:Select subsets X for which y satisfies y_i>0*)
+validYIndex=Select[Range[1,numIndepSubsets],Positive@Min@solYList[[#]]&];
+numValidY=Length[validYIndex]; (*Count of valid subsets*)
+
+Print["The number of subsets for which y_i > 0, |",Subscript[\[ScriptCapitalG], k],"| = ",numValidY];
+
+(*Normalize coefficients to obtain stochastic weights x*)
+solYValid=solYList[[validYIndex]];
+weights=(#/Total[#])&/@solYValid;
+
+(*Extract corresponding subsets of permutation matrices*)
+validSubsets=indepSubsets[[validYIndex]];
+
+(*Compute the bistochastic matrix Subscript[A, X] for each subset*)
+BistochasticMatrix[u_]:=Total[weights[[u]] validSubsets[[u]]]//N; (*N converts the rational entries of matrices to decimal form,enabling faster numerical computations in Mathematica.*)
+candidates=Union[Table[ArrayReshape[BistochasticMatrix[i],{n,n}],{i,1,numValidY}]];
+
+(*Step 6:Apply the heuristic splTrace filter*)
+filteredCandidates=Select[candidates,splTrace[#]<=Norm[#,"Frobenius"]^2&];
+
+Print["The number of filtered candidate matrices after splTrace: ",Length[filteredCandidates]];
+
+(*Step 7:Verify the defining condition to find actual Erdős matrices*)
+erdosMatrices=Select[filteredCandidates,MaxTrace[#,perms]==Norm[#,"Frobenius"]^2&];
+
+numErdos=Length[erdosMatrices];
+
+Print["The number of Erdős matrices, |",Subscript[\[ScriptCapitalE], k],"| = ",numErdos];
+
+(*Step 8:Identify non-equivalent Erdős matrices*)
+eqClassesErdos=ClassifyPermutationEquivalence[erdosMatrices,perms];
+
+(*Count of non-equivalent Erdős matrices*)
+noneqcount=Length[eqClassesErdos];
+Print["The number of non-equivalent Erdős matrices, |",Subscript[\[ScriptCapitalH], k],"| = ",noneqcount];
+
+(*Display count of equivalent matrices in each class*)
+Print["Sizes of equivalence classes: ",Table[Length[eqClassesErdos[[j]]],{j,1,noneqcount}]];
+
+(*List of representative Erdős matrices*)
+noneqErdosList=Table[eqClassesErdos[[j,1]],{j,1,noneqcount}]//Rationalize; (*Rationalize restores the decimal numbers to their fractional representation*)
+
+Print["List of all ",n," * ",n," Erdős matrices (up to equivalence) generated from subsets of ",k," permutation matrices: ",MatrixForm/@noneqErdosList];
+
+(*Identifying A with A^T, all non equivalent nxn Erdos matrices generated from subsets of size k are obtained by the modifying the equivClassfun function of the ClassifyPermutationEquivalence module in the following manner*)
+IdentifyUptoTranspose[matricesList_,permlist_]:=Module[{permsSquare,equivClasses,equivClassfun},
+permsSquare=Tuples[permlist,2];
+equivClassfun[permMatrix_]:=Union[Table[permsSquare[[j,1]].permMatrix.permsSquare[[j,2]],{j,1,Length[permsSquare]}],Table[permsSquare[[j,1]].Transpose[permMatrix].permsSquare[[j,2]],{j,1,Length[permsSquare]}]];
+equivClasses=Reap[NestWhile[Complement[#,Sow[equivClassfun[First[#]]\[Intersection]#]]&,matricesList,#!={}&]][[2,1]]]
+
+Print["Non equivalent Erdos matrices identfied upto transpose: ",MatrixForm/@First/@IdentifyUptoTranspose[noneqErdosList,perms]];
+Print["Number of classes: ",Length[IdentifyUptoTranspose[noneqErdosList,perms]]]
