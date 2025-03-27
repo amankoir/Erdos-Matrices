@@ -6,11 +6,18 @@ This repository contains a **Mathematica Notebook (`.nb`)** for generating **Erd
 ```
 satisfied by all $n \times n$ bistochastic matrices. The code can efficiently construct and classify these matrices for low dimensions.
 
-## How to Use
+## Usage
 1. **Download the latest release** from the [Releases Section](https://github.com/amankoir/Erdos-matrices/releases).
 2. Open the **`ErdosMatrixGenerator.nb`** file in **Mathematica**.
 3. Evaluate the notebook by supplying the values of $n$ and $k$ to produce all non-equivalent $n \times n$ Erdős matrices that are convex combination of exactly $k$ linearly independent permutation matrices.
 
+## Purpose  
+This repository provides computational resources for reproducing the results presented in the following paper:
+
+**Title of the paper:** A note on Erdős matrices and Marcus–Ree inequality  
+**Authors:** Aman Kushwaha, Raghavendra Tripathi  
+
+The provided Mathematica notebook contains the key implementations necessary to generate Erdős matrices and related computations.  
 
 ## Requirements
 - **Mathematica 12.0+** (or Wolfram Engine)
