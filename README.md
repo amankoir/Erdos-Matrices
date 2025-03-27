@@ -17,7 +17,7 @@ The provided Mathematica notebook contains the key implementations necessary to 
 ## Usage
 1. **Download the latest release** from the [Releases Section](https://github.com/amankoir/Erdos-matrices/releases).
 2. Open the **`ErdosMatrixGenerator.nb`** file in **Mathematica**.
-3. Evaluate the notebook by supplying the values of $n$ and $k$ to produce all non-equivalent $n \times n$ Erdős matrices that are convex combination of exactly $k$ linearly independent permutation matrices.
+3. Evaluate the notebook by supplying the values of $n$ and $k$ to produce all non-equivalent $n \times n$ Erdős matrices that are convex combinations of exactly $k$ linearly independent permutation matrices.
 
 ## Requirements
 - **Mathematica 12.0+** (or Wolfram Engine)
